@@ -5,7 +5,8 @@
 
 # input is fasta file of library sequences 
 
-path = "/Users/waltereckalbar/tools/MPRAssign/"
+
+
 
 
 import subprocess, os, string
@@ -16,7 +17,8 @@ import sys
 import os.path
 import argparse
 import re
-sys.path.insert(0, path+'modules')
+path = os.path.dirname(os.path.realpath(__file__))
+sys.path.insert(0, path+'/modules')
 from getBases import *
 from buildSTAR import *
 
