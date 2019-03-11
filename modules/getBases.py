@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+
+# This script will identify some genomeGenerate STAR parameters
+
 import sys, re, math
 
 
@@ -9,21 +12,12 @@ def getSTARGenomeParameters(inFile):
 	allChars = ""
 
 	StarParams = []
-	if '.fastq' in sys.argv[1]:
-		with open(sys.argv[1], 'rU') as infile:
-		    for line in infile:
-		    	if DNApattern.search(line.rstrip("\n")):
-		    		allChars+=line.rstrip("\n")
-		    	elif '@' in line.rstrip("\n"):
-		    		reads+=1
-	
-	else: 
-		with open(sys.argv[1], 'rU') as infile:
-		    for line in infile:
-		    	if DNApattern.search(line.rstrip("\n")):
-		    		allChars+=line.rstrip("\n")
-		    	if '>' in line.rstrip("\n"):
-		    		reads+=1
+	with open(inFile, 'rU') as infile:
+	    for line in infile:
+	    	if DNApattern.search(line.rstrip("\n")):
+	    		allChars+=line.rstrip("\n")
+	    	if '>' in line.rstrip("\n"):
+	    		reads+=1
 	
 	print "num bases: "+"{:,}".format(len(allChars))
 	print "num reads: "+"{:,}".format(reads)
