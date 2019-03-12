@@ -1,0 +1,4 @@
+[FLASH] WARNING: An unexpectedly high proportion of combined pairs (10.22%)
+overlapped by more than 94 bp, the --max-overlap (-M) parameter.  Consider
+increasing this parameter.  (As-is, FLASH is penalizing overlaps longer than
+94 bp when considering them for possible combining!)
