@@ -33,7 +33,7 @@ library = ''
 
 parser = argparse.ArgumentParser(description="Align fastq reads.")
 parser.add_argument("-l", "--library", default="library/reference.fa", type=str, help="-l [--library], Chose fasta file to great reference from")
-parser.add_argument("-t", "--threads", default=6, type=int, help="-t [--threads], genomeGenerate on this many threads.")
+parser.add_argument("-t", "--threads", default=4, type=int, help="-t [--threads], genomeGenerate on this many threads.")
 parser.add_argument("--version", action="store_true", help="[--version], prints the version of the script and then exits")
 args = parser.parse_args()
 
