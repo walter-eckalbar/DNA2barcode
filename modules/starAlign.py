@@ -10,4 +10,4 @@ def runSTAR(fastq, starDir, threads, outPutName):
 	parameters = parameters + " --limitBAMsortRAM 23052597265 --outFilterMultimapScoreRange 1"
 	print("STAR --runThreadN " + str(threads) + " --genomeDir " + starDir + " --readFilesIn " + fastq + " --outFileNamePrefix " + outPutName+"/" + parameters)
 	subprocess.call("STAR --runThreadN " + str(threads) + " --genomeDir " + starDir + " --readFilesIn " + fastq + " --outFileNamePrefix " + outPutName+"/" + parameters,shell=True)
-	subprocess.call("samtools index " + outPutName+"/Aligned.sortedByCoord.out.bam")
+	subprocess.call("samtools index " + outPutName+"/Aligned.sortedByCoord.out.bam", shell=True)

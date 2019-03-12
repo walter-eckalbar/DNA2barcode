@@ -18,6 +18,8 @@ import os.path
 import argparse
 import re
 import pysam
+import multiprocessing
+from functools import partial
 path = os.path.dirname(os.path.realpath(__file__))
 sys.path.insert(0, path+'/modules')
 from Bio import SeqIO
@@ -93,33 +95,18 @@ print("barcode read is : " + bcRead)
 alignmentBase = "alignOut"
 alignments = alignmentBase+"/Aligned.sortedByCoord.out.bam"
 
-#loading alignments
-bamFile = pysam.AlignmentFile(alignments, "rb")
 #loading fasta file
 faDict = SeqIO.to_dict(SeqIO.parse(library, "fasta"))
 seqList = faDict.keys()
 
 # create file in a directory of all reads aligning to a test sequence 
 # then extract fastq reads from barcode file from those sequences
-for i in seqList:
-	readListFile = errorCorrectDir+"/"+i+"/"+"readsOn."+i+".txt"
-	outputFastq = errorCorrectDir+"/"+i+"/"+"readsOn."+i+".fastq.gz"
-	tmpList = []
-	try: 
-		os.mkdir(errorCorrectDir+"/"+i)
-	except OSError:
-		pass
-	tmpSam = bamFile.fetch(i)
-	for x in tmpSam:
-		tmpList.append(x.query_name)
-	with open(readListFile, 'w') as f:
-		for item in tmpList:
-			f.write("%s\n" % item)
-	runExtractFastqByNames(bcRead, readListFile, outputFastq)
-	
 
-
-
+pool = multiprocessing.Pool(int(threads)) # run this many threads concurrently
+func = partial(runExtractFastqByNames, bcRead, alignments, errorCorrectDir)
+pool.map(func, seqList)
+pool.close()
+pool.join()	
 
 
 
