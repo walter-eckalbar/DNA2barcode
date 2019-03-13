@@ -28,8 +28,9 @@ def runExtractFastqByNames(fastq, bam, errorCorrectDir, seqID):
 
 	outputBase = outputFastq.split(".fastq")[0]
 	ecOutput = outputBase+".ec.fastq"
-	ecOutpetErr = outputBase+".ec.err.txt"
+	ecOutpubtErr = outputBase+".ec.err.txt"
+	ecOutpubtLog = outputBase+".ec.log.txt"
 
 	#print("seqkit grep --pattern-file "+ readListFile + " " + fastq + " > " + outputFastq + " 2> " + outputBase+".err.txt")
 	subprocess.call("seqkit grep --pattern-file "+ readListFile + " " + fastq + " > " + outputFastq + " 2> " + outputBase+".err.txt", shell=True)
-	subprocess.call("ace 1500 " + outputFastq + " " + ecOutput + " 2> " + ecOutputErr,shell=True)
+	subprocess.call("ace 1500 " + outputFastq + " " + ecOutput + " > " + ecOutpubtLog + " 2> " + ecOutputErr,shell=True)
