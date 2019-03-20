@@ -19,7 +19,7 @@ import argparse
 import re
 import pysam
 import multiprocessing
-from multiprocessing import Manager
+from multiprocessing import Manager,Process
 import gzip
 import time
 import datetime
@@ -29,6 +29,8 @@ path = os.path.dirname(os.path.realpath(__file__))
 sys.path.insert(0, path+'/modules')
 from Bio import SeqIO
 from Bio import Align
+import itertools
+from collections import defaultdict
 from barcodeExtract import *
 
 
@@ -147,51 +149,95 @@ print("running multiprocessing of barcode error correction : " + getTime())
 # dictionary of keys for Windows, values are a second dictionary with seqs as keys and counts as values 
 print("getting BC key, window value dictionaries : " + getTime())
 bcDictSeqsAsKeys = {}
-for j in windowList:
-	tmpDict = {}
-	aboveMinCutoffDict = {}
-	ecFastq = errorCorrectDir+"/"+j+"/"+"readsOn."+j+".fastq"
-	fastqDict = SeqIO.to_dict(SeqIO.parse(ecFastq,"fastq"))
-	
-	counter = 0
-	for key in fastqDict:
-		counter += 1 
-		seqK = fastqDict[key].seq
-		if seqK in tmpDict:
-			tmpDict[seqK] = tmpDict[seqK] + 1
-		else:
-			tmpDict[seqK] = 1
 
-	sumReads = len(fastqDict)
-	sumReadFilteredReads = sumReads
+def runMultiThreadedReading():
+	pool = multiprocessing.Pool(int(threads))
+	manager = Manager()
+	#bcDictSeqsAsKeys = manager.dict()
+	#func = partial(runFilterWindowBCs, bcDictSeqsAsKeys,errorCorrectDir, minBarcodeCounts, percentBCReads)
+	func = partial(runFilterWindowBCs, errorCorrectDir, minBarcodeCounts, percentBCReads)
+	listSeqs = pool.map(func, windowList) 
+	#print(listSeqs)
 	
-	if bool(tmpDict):
-		valueMax = max(tmpDict.itervalues())
+	i = listSeqs[0]
+	print(i)
+	print(i[0])
+	print(i[1])
 	
-		iCoverage = 1
-		for iCoverage in range(1,valueMax):
-			delList = []
-			tmp2Dict = dict( (k, v) for k, v in tmpDict.items() if v >= iCoverage)
-	
-			sumReadFilteredReads = sum(tmp2Dict.itervalues())
-			if (sumReadFilteredReads <= (sumReads * percentBCReads)):
-				break
+	for i in listSeqs:
+		if i != None:
+			key = i[0]
+			value = i[1]
+			if key in bcDictSeqsAsKeys:
+				bcDictSeqsAsKeys[key].append(value)
 			else:
-				continue
+				bcDictSeqsAsKeys[key] = [value]
+
+#print(bcDictSeqsAsKeys)
+
+def singleThreadedReading():
+	for j in windowList:
+		tmpDict = {}
+		aboveMinCutoffDict = {}
+		indFastq = "readsOn."+j+".fastq"
+		ecFastq = errorCorrectDir+"/"+j+"/"+"readsOn."+j+".ec.fastq"
+		if os.path.isfile(ecFastq):
+			pass
+		else:
+			print "ln -s " + indFastq + " " + ecFastq
+			subprocess.call("ln -s " + indFastq + " " + ecFastq, shell=True)
 	
-		for tmp2Key in tmp2Dict:
-			if tmp2Dict[tmp2Key] >= minBarcodeCounts:
-				aboveMinCutoffDict[tmp2Key] = tmp2Dict[tmp2Key]
 	
-		for tmp3Key in aboveMinCutoffDict:
-			tmp3List = [j, aboveMinCutoffDict[tmp3Key]]
-			if tmp3Key in bcDictSeqsAsKeys:
-				bcDictSeqsAsKeys[tmp3Key].append(tmp3List)
+	
+	
+	
+	
+		fastqDict = SeqIO.to_dict(SeqIO.parse(ecFastq,"fastq"))
+		
+		counter = 0
+		for key in fastqDict:
+			counter += 1 
+			seqK = fastqDict[key].seq
+			if seqK in tmpDict:
+				tmpDict[seqK] = tmpDict[seqK] + 1
 			else:
-				bcDictSeqsAsKeys[tmp3Key] = list()
-				bcDictSeqsAsKeys[tmp3Key].append(tmp3List)
-	else:
-		continue
+				tmpDict[seqK] = 1
+	
+		sumReads = len(fastqDict)
+		sumReadFilteredReads = sumReads
+		
+		if bool(tmpDict):
+			valueMax = max(tmpDict.itervalues())
+		
+			iCoverage = 1
+			for iCoverage in range(1,valueMax):
+				delList = []
+				tmp2Dict = dict( (k, v) for k, v in tmpDict.items() if v >= iCoverage)
+		
+				sumReadFilteredReads = sum(tmp2Dict.itervalues())
+				if (sumReadFilteredReads <= (sumReads * percentBCReads)):
+					break
+				else:
+					continue
+		
+			for tmp2Key in tmp2Dict:
+				if tmp2Dict[tmp2Key] >= minBarcodeCounts:
+					aboveMinCutoffDict[tmp2Key] = tmp2Dict[tmp2Key]
+		
+			for tmp3Key in aboveMinCutoffDict:
+				tmp3List = [j, aboveMinCutoffDict[tmp3Key]]
+				if tmp3Key in bcDictSeqsAsKeys:
+					bcDictSeqsAsKeys[tmp3Key].append(tmp3List)
+				else:
+					bcDictSeqsAsKeys[tmp3Key] = list()
+					bcDictSeqsAsKeys[tmp3Key].append(tmp3List)
+		else:
+			continue
+
+#runMultiThreadedReading()
+
+singleThreadedReading()
+
 
 blackList = []
 for seqK in bcDictSeqsAsKeys:

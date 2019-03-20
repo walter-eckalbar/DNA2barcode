@@ -6,6 +6,7 @@ import sys, re, math, subprocess
 import os
 import pysam
 from Bio import Align
+from Bio import SeqIO
 
 def runExtractFastqByNames(fastq, bam, errorCorrectDir, seqID):
 
@@ -36,6 +37,69 @@ def runExtractFastqByNames(fastq, bam, errorCorrectDir, seqID):
 	#print("seqkit grep --pattern-file "+ readListFile + " " + fastq + " > " + outputFastq + " 2> " + outputBase+".err.txt")
 	subprocess.call("seqkit grep --pattern-file "+ readListFile + " " + fastq + " > " + outputFastq + " 2> " + outputBase+".err.txt", shell=True)
 	#subprocess.call("ace 1500 " + outputFastq + " " + ecOutput + " > " + ecOutputLog + " 2> " + ecOutputErr,shell=True)
+
+
+def runFilterWindowBCs(errorCorrectDir, minBarcodeCounts,percentBCReads, window):
+	j = window
+	tmpDict = {}
+	aboveMinCutoffDict = {}
+	indFastq = "readsOn."+j+".fastq"
+	ecFastq = errorCorrectDir+"/"+j+"/"+"readsOn."+j+".ec.fastq"
+	if os.path.isfile(ecFastq):
+		pass
+	else:
+		#print "ln -s " + indFastq + " " + ecFastq
+		subprocess.call("ln -s " + indFastq + " " + ecFastq, shell=True)
+
+	fastqDict = SeqIO.to_dict(SeqIO.parse(ecFastq,"fastq"))
+	
+	counter = 0
+	for key in fastqDict:
+		counter += 1 
+		seqK = fastqDict[key].seq
+		if seqK in tmpDict:
+			tmpDict[seqK] = tmpDict[seqK] + 1
+		else:
+			tmpDict[seqK] = 1
+
+	sumReads = len(fastqDict)
+	sumReadFilteredReads = sumReads
+	
+	if bool(tmpDict):
+		valueMax = max(tmpDict.itervalues())
+	
+		iCoverage = 1
+		for iCoverage in range(1,valueMax):
+			delList = []
+			tmp2Dict = dict( (k, v) for k, v in tmpDict.items() if v >= iCoverage)
+			sumReadFilteredReads = sum(tmp2Dict.itervalues())
+			if (sumReadFilteredReads <= (sumReads * percentBCReads)):
+				break
+			else:
+				continue
+		#try:
+		#	tmp2Dict
+		#	if isinstance(tmp2Dict,dict):# in locals(): #if isinstance(ele,dict)
+		for tmp2Key in tmp2Dict:
+			if tmp2Dict[tmp2Key] >= minBarcodeCounts:
+				aboveMinCutoffDict[tmp2Key] = tmp2Dict[tmp2Key]
+			
+			for tmp3Key in aboveMinCutoffDict:
+				tmp3List = [j, aboveMinCutoffDict[tmp3Key]]
+				return tmp3Key, tmp3List
+					#return tmp3Key, tmp3List
+					#if tmp3Key in finalDict:
+					#	finalDict[tmp3Key].append(tmp3List)
+					#else:
+					#	finalDict[tmp3Key] = list()
+					#	finalDict[tmp3Key].append(tmp3List)
+#		except UnboundLocalError:
+#			pass
+
+
+
+
+
 
 
 
