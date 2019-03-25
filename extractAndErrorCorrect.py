@@ -145,11 +145,11 @@ gc.collect()
 # create file in a directory of all reads aligning to a test sequence 
 # then extract fastq reads from barcode file from those sequences
 print("running multiprocessing of barcode error correction : " + getTime())
-#pool = multiprocessing.Pool(int(threads)) # run this many threads concurrently
-#func = partial(runExtractFastqByNames, bcRead, alignments, errorCorrectDir)
-#pool.map(func, windowList)
-#pool.close()
-#pool.join()
+pool = multiprocessing.Pool(int(threads)) # run this many threads concurrently
+func = partial(runExtractFastqByNames, bcRead, alignments, errorCorrectDir)
+pool.map(func, windowList)
+pool.close()
+pool.join()
 
 # read error corrected reads, create dictionary of library seqs, values of BCs and counts
 # dictionary of keys for Windows, values are a second dictionary with seqs as keys and counts as values 
