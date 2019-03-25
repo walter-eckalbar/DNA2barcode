@@ -3,10 +3,89 @@
 # This script will overlap the PE reads into single merged read
 
 import sys, re, math, subprocess
-import os
+import os,csv
 import pysam
 from Bio import Align
 from Bio import SeqIO
+
+def findSumThreshold(vect,perc):
+    v = sorted(vect, reverse=True)
+    sumV = sum(v)
+    vFiltered =[]
+    for i in v:
+        vFiltered = [j for j in v if j >= i]
+        sumVFiltered = sum(vFiltered)
+        if sumVFiltered >= (sumV * float(perc)):
+            return i
+        else:
+            continue
+
+def getUniqBCsPerWindow(errorCorrectDir,window):
+	j = window
+	tmpDict = {}
+	
+	uniqueFile = errorCorrectDir+"/"+j+"/"+"uniqBarcodes.counts."+j+".txt"
+	indFastq = "readsOn."+j+".fastq"
+	ecFastq = errorCorrectDir+"/"+j+"/"+"readsOn."+j+".ec.fastq"
+	if os.path.isfile(ecFastq):
+		pass
+	else:
+		subprocess.call("ln -s " + indFastq + " " + ecFastq, shell=True)
+
+	fastqDict = SeqIO.to_dict(SeqIO.parse(ecFastq,"fastq"))
+	
+	counter = 0
+	for key in fastqDict:
+		counter += 1 
+		seqK = fastqDict[key].seq
+		if "N" not in seqK:
+			if seqK in tmpDict:
+				tmpDict[seqK] = tmpDict[seqK] + 1
+			else:
+				tmpDict[seqK] = 1
+		else:
+			continue
+
+	uniqueFileOpen=open(uniqueFile,'wb')
+	uniqueFileExp=csv.writer(uniqueFileOpen, lineterminator='\n', delimiter = '\t')
+	uniqueFileExp.writerow(["Window", "Barcode Seq", "counts"])
+	for key in tmpDict:
+		value = tmpDict[key]
+		uniqueFileExp.writerow([j, key, value])
+	return tmpDict
+
+
+def allUniqBCbyWindow(errorCorrectDir,windowList):
+	uniqBCdict = {}
+	for i in windowList:
+		uniqueFile = errorCorrectDir+"/"+i+"/"+"uniqBarcodes.counts."+i+".txt"
+		with open(uniqueFile) as openFile:
+			for line in openFile.readlines():
+				line = line.split('\n')[0]
+				line = line.split('\t')
+
+				
+				window = line[0]
+				barcode = line[1]
+				coverage = line[2]
+				key = window + "_" + barcode
+				if window != "Window":
+					uniqBCdict[key] = [window,barcode,coverage]
+    	#uniqueFile.close()
+	
+	uniqueAllFile = "final_outputs/uniqBarcodesAll.counts.txt"
+	uniqueAllFileOpen=open(uniqueAllFile,'wb')
+	uniqueAllFileExp=csv.writer(uniqueAllFileOpen, lineterminator='\n', delimiter = '\t')
+	uniqueAllFileExp.writerow(["Window_BC","Window", "Barcode Seq", "counts"])
+	for key in uniqBCdict:
+		value = uniqBCdict[key]
+		window = value[0]
+		barcode = value[1]
+		counts = value[2]
+		uniqueAllFileExp.writerow([key,window,barcode,counts])
+
+
+
 
 def runExtractFastqByNames(fastq, bam, errorCorrectDir, seqID):
 
@@ -45,59 +124,33 @@ def runFilterWindowBCs(errorCorrectDir, minBarcodeCounts,percentBCReads, window)
 	aboveMinCutoffDict = {}
 	indFastq = "readsOn."+j+".fastq"
 	ecFastq = errorCorrectDir+"/"+j+"/"+"readsOn."+j+".ec.fastq"
-	if os.path.isfile(ecFastq):
-		pass
-	else:
-		#print "ln -s " + indFastq + " " + ecFastq
-		subprocess.call("ln -s " + indFastq + " " + ecFastq, shell=True)
 
-	fastqDict = SeqIO.to_dict(SeqIO.parse(ecFastq,"fastq"))
-	
-	counter = 0
-	for key in fastqDict:
-		counter += 1 
-		seqK = fastqDict[key].seq
-		if seqK in tmpDict:
-			tmpDict[seqK] = tmpDict[seqK] + 1
-		else:
-			tmpDict[seqK] = 1
+	tmpDict = getUniqBCsPerWindow(errorCorrectDir, window)
 
-	sumReads = len(fastqDict)
-	sumReadFilteredReads = sumReads
 	
 	if bool(tmpDict):
-		valueMax = max(tmpDict.itervalues())
-	
-		iCoverage = 1
-		for iCoverage in range(1,valueMax):
-			delList = []
-			tmp2Dict = dict( (k, v) for k, v in tmpDict.items() if v >= iCoverage)
-			sumReadFilteredReads = sum(tmp2Dict.itervalues())
-			if (sumReadFilteredReads <= (sumReads * percentBCReads)):
-				break
-			else:
-				continue
-		#try:
-		#	tmp2Dict
-		#	if isinstance(tmp2Dict,dict):# in locals(): #if isinstance(ele,dict)
+		coverageList = list(tmpDict.values())
+		percLimit = findSumThreshold(coverageList, percentBCReads)
+
+
+		tmp2Dict = {}
+
+		for k in tmpDict:
+			v = tmpDict[k]
+			if v >= percLimit:
+				tmp2Dict[k] = v
+
+		outputList = []
+		tmp3Dict = {}
 		for tmp2Key in tmp2Dict:
 			if tmp2Dict[tmp2Key] >= minBarcodeCounts:
-				aboveMinCutoffDict[tmp2Key] = tmp2Dict[tmp2Key]
-			
-			for tmp3Key in aboveMinCutoffDict:
-				tmp3List = [j, aboveMinCutoffDict[tmp3Key]]
-				return tmp3Key, tmp3List
-					#return tmp3Key, tmp3List
-					#if tmp3Key in finalDict:
-					#	finalDict[tmp3Key].append(tmp3List)
-					#else:
-					#	finalDict[tmp3Key] = list()
-					#	finalDict[tmp3Key].append(tmp3List)
-#		except UnboundLocalError:
-#			pass
-
-
-
+				tmp2List = [j, tmp2Dict[tmp2Key]]
+				tmp3Dict[tmp2Key] = tmp2List
+		for tmp3Key in tmp3Dict:
+			tmp3Value = tmp3Dict[tmp3Key]
+			outputList.append([tmp3Key,tmp3Value])
+			#return tmp3Key, tmp3Value
+		return outputList
 
 
 

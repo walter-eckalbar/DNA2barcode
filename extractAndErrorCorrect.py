@@ -66,11 +66,11 @@ percentBCReads= ''
 parser = argparse.ArgumentParser(description="Align fastq reads.")
 parser.add_argument("-l", "--library", default="library/reference.fa", type=str, help="-l [--library], Choose fasta file to great reference from")
 parser.add_argument("-f", "--fastqDir", default="fastq", type=str, help="-f [--fastq_dir], Choose fastq directory for merging and alignment")
-parser.add_argument("-t", "--threads", default=4, type=int, help="-t [--threads], genomeGenerate on this many threads.")
-parser.add_argument("-bc", "--barcodeRead", default="R2",type=str, help="-bc [--barcodeRead], read with enhancer barcode")
-parser.add_argument("-m", "--minBarcodeCounts", default="20",type=int, help="-m [--minBarcodeCounts], minimum reads of barcode to keep")
-parser.add_argument("-e", "--editDistanceMax", default="2",type=int, help="-e [--editDistanceMax], maximum edit distance between white list barcodes")
-parser.add_argument("-p", "--percentBCReads", default="92.5",type=float, help="-p [--percentBCReads], BCs that contain the top X percentile of reads \n(removes many frequent low count BCs)")
+parser.add_argument("-t", "--threads", default=4, type=int, help="-t [--threads], genomeGenerate on this many threads (default : 4).")
+parser.add_argument("-bc", "--barcodeRead", default="R2",type=str, help="-bc [--barcodeRead], read with enhancer barcode (default : R2)")
+parser.add_argument("-m", "--minBarcodeCounts", default="20",type=int, help="-m [--minBarcodeCounts], minimum reads of barcode to keep\n (default : 20)")
+parser.add_argument("-e", "--editDistanceMax", default="2",type=int, help="-e [--editDistanceMax], maximum edit distance between white list barcodes\n default  : 2")
+parser.add_argument("-p", "--percentBCReads", default="92.5",type=float, help="-p [--percentBCReads], BCs that contain the top X (default 92.5) percentile of reads \n(removes many frequent low count BCs)")
 parser.add_argument("--version", action="store_true", help="[--version], prints the version of the script and then exits")
 args = parser.parse_args()
 
@@ -99,6 +99,12 @@ STAR_dir = "STAR_" + STAR_dir
 errorCorrectDir = "errorCorrect"
 try: 
 	os.mkdir(errorCorrectDir)
+except OSError:
+	pass
+
+finalDir = "final_outputs"
+try: 
+	os.mkdir(finalDir)
 except OSError:
 	pass
 
@@ -156,15 +162,17 @@ def runMultiThreadedReading():
 	#bcDictSeqsAsKeys = manager.dict()
 	#func = partial(runFilterWindowBCs, bcDictSeqsAsKeys,errorCorrectDir, minBarcodeCounts, percentBCReads)
 	func = partial(runFilterWindowBCs, errorCorrectDir, minBarcodeCounts, percentBCReads)
-	listSeqs = pool.map(func, windowList) 
-	#print(listSeqs)
-	
-	i = listSeqs[0]
-	print(i)
-	print(i[0])
-	print(i[1])
-	
+	listSeqs = pool.map(func, windowList)
+
+	listSeqsNoneRM = []
 	for i in listSeqs:
+		if i != None:
+			listSeqsNoneRM.append(i)
+	
+	flat_listSeqs = [item for sublist in listSeqsNoneRM for item in sublist]
+
+
+	for i in flat_listSeqs:
 		if i != None:
 			key = i[0]
 			value = i[1]
@@ -173,70 +181,10 @@ def runMultiThreadedReading():
 			else:
 				bcDictSeqsAsKeys[key] = [value]
 
-#print(bcDictSeqsAsKeys)
+	allUniqBCbyWindow(errorCorrectDir,windowList)
 
-def singleThreadedReading():
-	for j in windowList:
-		tmpDict = {}
-		aboveMinCutoffDict = {}
-		indFastq = "readsOn."+j+".fastq"
-		ecFastq = errorCorrectDir+"/"+j+"/"+"readsOn."+j+".ec.fastq"
-		if os.path.isfile(ecFastq):
-			pass
-		else:
-			print "ln -s " + indFastq + " " + ecFastq
-			subprocess.call("ln -s " + indFastq + " " + ecFastq, shell=True)
-	
-	
-	
-	
-	
-	
-		fastqDict = SeqIO.to_dict(SeqIO.parse(ecFastq,"fastq"))
-		
-		counter = 0
-		for key in fastqDict:
-			counter += 1 
-			seqK = fastqDict[key].seq
-			if seqK in tmpDict:
-				tmpDict[seqK] = tmpDict[seqK] + 1
-			else:
-				tmpDict[seqK] = 1
-	
-		sumReads = len(fastqDict)
-		sumReadFilteredReads = sumReads
-		
-		if bool(tmpDict):
-			valueMax = max(tmpDict.itervalues())
-		
-			iCoverage = 1
-			for iCoverage in range(1,valueMax):
-				delList = []
-				tmp2Dict = dict( (k, v) for k, v in tmpDict.items() if v >= iCoverage)
-		
-				sumReadFilteredReads = sum(tmp2Dict.itervalues())
-				if (sumReadFilteredReads <= (sumReads * percentBCReads)):
-					break
-				else:
-					continue
-		
-			for tmp2Key in tmp2Dict:
-				if tmp2Dict[tmp2Key] >= minBarcodeCounts:
-					aboveMinCutoffDict[tmp2Key] = tmp2Dict[tmp2Key]
-		
-			for tmp3Key in aboveMinCutoffDict:
-				tmp3List = [j, aboveMinCutoffDict[tmp3Key]]
-				if tmp3Key in bcDictSeqsAsKeys:
-					bcDictSeqsAsKeys[tmp3Key].append(tmp3List)
-				else:
-					bcDictSeqsAsKeys[tmp3Key] = list()
-					bcDictSeqsAsKeys[tmp3Key].append(tmp3List)
-		else:
-			continue
 
-#runMultiThreadedReading()
-
-singleThreadedReading()
+runMultiThreadedReading()
 
 
 blackList = []
@@ -281,12 +229,6 @@ for iEditBlackList in alignedBlackListUniq:
 	del bcDictSeqsAsKeys[iEditBlackList]
 
 print("number of barcodes post 2nd round blacklist filtering : " + str(len(bcDictSeqsAsKeys)))
-
-finalDir = "final_outputs"
-try: 
-	os.mkdir(finalDir)
-except OSError:
-	pass
 
 fastaFileOut=open(finalDir+"/finalBarcodes.fa",'wb')
 tableFileOut = open(finalDir+"/finalBarcodes.counts.txt", 'wb')
