@@ -82,6 +82,7 @@ if args.version == True:
 library = args.library
 threads = args.threads
 fastqDir = args.fastqDir
+fastqDir = fastqDir.split("/")[0]
 barcodeRead = args.barcodeRead
 minBarcodeCounts = args.minBarcodeCounts
 editDistanceMax = args.editDistanceMax

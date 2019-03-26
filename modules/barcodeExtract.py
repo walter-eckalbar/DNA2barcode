@@ -115,7 +115,7 @@ def runExtractFastqByNames(fastq, bam, errorCorrectDir, seqID):
 
 	#print("seqkit grep --pattern-file "+ readListFile + " " + fastq + " > " + outputFastq + " 2> " + outputBase+".err.txt")
 	subprocess.call("seqkit grep --pattern-file "+ readListFile + " " + fastq + " > " + outputFastq + " 2> " + outputBase+".err.txt", shell=True)
-	#subprocess.call("ace 1500 " + outputFastq + " " + ecOutput + " > " + ecOutputLog + " 2> " + ecOutputErr,shell=True)
+	subprocess.call("ace 1500 " + outputFastq + " " + ecOutput + " > " + ecOutputLog + " 2> " + ecOutputErr,shell=True)
 
 
 def runFilterWindowBCs(errorCorrectDir, minBarcodeCounts,percentBCReads, window):
