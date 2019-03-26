@@ -58,6 +58,8 @@ if args.version == True:
 library = args.library
 threads = args.threads
 fastqDir = args.fastqDir
+fastqDir = fastqDir.split("/")[0]
+print(fastqDir)
 insertSize = args.insertSize
 readLength = args.readLength
 barcodeRead = args.barcodeRead
