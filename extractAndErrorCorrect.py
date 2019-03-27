@@ -131,6 +131,14 @@ else:
 	print("gunzip-ing fastq : " + getTime())
 	subprocess.call("unpigz -c -p " + str(threads) + " " + bcRead + " > " + bcReadFastq,shell=True)
 
+bcReadFastqIDX = bcReadFastq + ".fai" 
+
+if os.path.isfile(bcReadFastqIDX):
+	print("fastq index file exists, skipping")
+else:
+	print("indexing fastq : " + getTime())
+	subprocess.call("samtools fqidx " + bcRead + " > " + bcReadFastqIDX+".log.txt 2> " + bcReadFastqIDX+".err.txt",shell=True)
+
 # set up variables
 alignmentBase = "alignOut"
 alignments = alignmentBase+"/Aligned.sortedByCoord.out.bam"
@@ -217,6 +225,8 @@ alignedBlackList = pool.map(func, seqRanges)
 pool.close()
 pool.join()
 
+print("Final barcode whitelisting :" + getTime())
+
 alignedBlackList  = [x for x in alignedBlackList if x is not None]
 
 # Flatten the list of lists
@@ -251,6 +261,7 @@ for key in bcDictSeqsAsKeys:
 	fastaFileExp.writerow([bcSeq])
 
 
+print("All finished :" + getTime())
 
 
 

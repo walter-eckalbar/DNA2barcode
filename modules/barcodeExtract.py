@@ -114,7 +114,8 @@ def runExtractFastqByNames(fastq, bam, errorCorrectDir, seqID):
 	ecOutputLog = outputBase+".ec.log.txt"
 
 	#print("seqkit grep --pattern-file "+ readListFile + " " + fastq + " > " + outputFastq + " 2> " + outputBase+".err.txt")
-	subprocess.call("seqkit grep --pattern-file "+ readListFile + " " + fastq + " > " + outputFastq + " 2> " + outputBase+".err.txt", shell=True)
+	#subprocess.call("seqkit grep --pattern-file "+ readListFile + " " + fastq + " > " + outputFastq + " 2> " + outputBase+".err.txt", shell=True)
+	subprocess.call("samtools fqidx -r "+ readListFile + " -o " + outputFastq + " " + fastq + " > "  + outputBase+".log.txt" + " 2> " + outputBase+".err.txt", shell=True)
 	subprocess.call("ace 1500 " + outputFastq + " " + ecOutput + " > " + ecOutputLog + " 2> " + ecOutputErr,shell=True)
 
 
