@@ -169,3 +169,4 @@ def alignSeqs(keySequences, editDistance, count):
 		if alignments.score >= minScore and  alignments.score < 15:
 			alignment = alignments[0]
 			return i,j
+

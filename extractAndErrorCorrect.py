@@ -129,7 +129,7 @@ if os.path.isfile(bcReadFastq):
 	print("unzipped file exists, skipping")
 else:
 	print("gunzip-ing fastq : " + getTime())
-	subprocess.call("unpigz -c -p " + str(threads) + " " + bcRead + " > " + bcReadFastq,shell=True)
+	subprocess.call("bgzip -d -c -@ " + str(threads) + " " + bcRead + " > " + bcReadFastq,shell=True)
 
 bcReadFastqIDX = bcReadFastq + ".fai" 
 
@@ -137,7 +137,7 @@ if os.path.isfile(bcReadFastqIDX):
 	print("fastq index file exists, skipping")
 else:
 	print("indexing fastq : " + getTime())
-	subprocess.call("samtools fqidx " + bcRead + " > " + bcReadFastqIDX+".log.txt 2> " + bcReadFastqIDX+".err.txt",shell=True)
+	subprocess.call("samtools fqidx " + bcReadFastq + " > " + bcReadFastqIDX+".log.txt 2> " + bcReadFastqIDX+".err.txt",shell=True)
 
 # set up variables
 alignmentBase = "alignOut"
@@ -155,7 +155,7 @@ gc.collect()
 # then extract fastq reads from barcode file from those sequences
 print("running multiprocessing of barcode error correction : " + getTime())
 pool = multiprocessing.Pool(int(threads)) # run this many threads concurrently
-func = partial(runExtractFastqByNames, bcRead, alignments, errorCorrectDir)
+func = partial(runExtractFastqByNames, bcReadFastq, alignments, errorCorrectDir)
 pool.map(func, windowList)
 pool.close()
 pool.join()
