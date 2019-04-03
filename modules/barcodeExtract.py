@@ -103,7 +103,9 @@ def runExtractFastqByNames(fastq, bam, errorCorrectDir, seqID):
 		pass
 	tmpSam = bamFile.fetch(seqID)
 	for x in tmpSam:
-		tmpList.append(x.query_name)
+		if x.query_name not in tmpList:
+			tmpList.append(x.query_name)
+
 	with open(readListFile, 'w') as f:
 		for item in tmpList:
 			f.write("%s\n" % item)
